@@ -2,6 +2,8 @@
 ## What is Geocoding?
  Geocoding is the computational process of transforming a physical address description to a geographic locations (Latitude and Longitude).
 
+ In this repositories, I used three online provides include OpenStreet Map, GoogleMap and ArcGIS.
+
 ## Installation
 To geolocate a single address, I use Geopy python library. 
 
@@ -193,4 +195,19 @@ if test_result['status'] != 'OK':
     logger.warning("There was an error when testing the Google Geocoder.")
     raise ConnectionError('Problem with test results from Google Geocode - check your API key and internet connection.')
 test_result
+```
+
+## Geocode with ArcGIS
+Before writing the code, I found a very helpful resouce at https://github.com/DenisCarriere/geocoder/tree/master/geocoder. Denis combined almost all geocode providers in one package named geocoder. Therefore, I will simply import ArcGIS from geocoder. 
+
+```
+import geocoder
+from geocoder.api import get, yahoo, bing, geonames, mapquest, google, mapbox
+from geocoder.api import nokia, osm, tomtom, geolytica, arcgis, opencage, locationiq
+```
+```
+g=geocoder.arcgis('27250 Madison Avenue')
+g.json
+latitude = print(g.json['lat'])
+longitude = print(g.json['lng'])
 ```

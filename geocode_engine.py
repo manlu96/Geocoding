@@ -1,16 +1,20 @@
 import logging
 import time
 
-import geopandas
 import geopy
 import pandas as pd
 import requests
 from geopy.geocoders import nominatim
 from geopy.extra.rate_limiter import RateLimiter
+from sqlalchemy import true
+
+# use geocoder at https://github.com/DenisCarriere/geocoder/tree/master/geocoder
+import geocoder
+from geocoder.api import get, bing
+from geocoder.api import arcgis, opencage, locationiq
 
 
-
-class GeocodeEngine():
+class GeocodeEngine:
 
     def __init__(self):
         pass
@@ -19,7 +23,7 @@ class GeocodeEngine():
 
         ret = {'latitude': [], 'longitude': []}
         #return the latitude and longitute for the address
-        locator = nominatim.Nominatim(user_agent="store_address")
+        locator = nominatim.Nominatim(user_agent="store_address", timeout=10000)
         geocode = RateLimiter(locator.geocode, min_delay_seconds=1)
 
         for address in addresses:
@@ -36,7 +40,7 @@ class GeocodeEngine():
 
         return ret
         
-    def _get_google_results(addresses, api_key=None, return_full_response=False):
+    def _get_google_results(self, addresses, api_key=None, return_full_response=False):
         
         ret = {'latitude': [], 'longitude': []}
         params = {
@@ -60,6 +64,23 @@ class GeocodeEngine():
                 
         return ret
     
+    def _get_arcgis_results(self, addresses):
+        ret = {'latitude': [], 'longitude': []}
+
+        for address in addresses:
+
+            location=geocoder.arcgis(address)
+
+            lat = None
+            lng = None
+            if location.json is not None:
+                lat = location.json['lat']
+                lng = location.json['lng']
+            ret['latitude'].append(lat)
+            ret['longitude'].append(lng)
+
+        return ret
+
     def _preprocess_address(self, df):
         full_addresses = []
 
@@ -101,10 +122,13 @@ class GeocodeEngine():
             geo_code = self._get_google_results(full_address, api_key=api_key, return_full_response=return_full_response)
         elif geocoder_type == "Nominatim":
             geo_code = self._get_nominatim_results(full_address)
+        elif geocoder_type == "Arcgis":
+            geo_code = self._get_arcgis_results(full_address)
         else:
             raise ValueError("geocoder not defined! Use either GoogleMap or Nominatim")
         ret = address.copy()
-        ret = pd.concat([ret, pd.DataFrame(geo_code)], axis=1)
+        ret = pd.concat([ret, pd.DataFrame(geo_code).set_index(ret.index)], axis=1)
+        ret['date_geocoded'] = pd.to_datetime('today').date()
         return ret
 
 
@@ -112,6 +136,6 @@ if __name__ == '__main__':
     df = pd.read_csv("Locations.csv")
     geocode_engine = GeocodeEngine()
     # df=pd.DataFrame({"Address1":["11251 Beech Avenue","606 W.Katella Avenue"],"City":["Fontana","Orange"], "State":["CA","CA"]})
-    print(geocode_engine.get_geocode(df.head()))
+    print(geocode_engine.get_geocode(df.head())) 
 
     
